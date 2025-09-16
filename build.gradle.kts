@@ -31,6 +31,8 @@ dependencies {
 	testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
 	testImplementation("org.mockito:mockito-core:5.2.0")
 	testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
+	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 }
 
 kotlin {

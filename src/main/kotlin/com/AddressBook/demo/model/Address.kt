@@ -2,7 +2,7 @@ package com.AddressBook.demo.model
 
 import com.AddressBook.demo.type.AddressType
 import jakarta.persistence.*
-
+@Entity
 data class Address(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
@@ -13,6 +13,9 @@ data class Address(
     var city: String?,
 
     @Enumerated(EnumType.STRING)
-    var type: AddressType
+    var type: AddressType,
+    @ManyToOne
+    @JoinColumn(name = "contact_id", nullable = false)
+    var contact: Contact? = null
 
 )

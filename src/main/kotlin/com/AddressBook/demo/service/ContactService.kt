@@ -8,81 +8,94 @@ import com.AddressBook.demo.model.Contact
 import com.AddressBook.demo.model.PhoneNumber
 import com.AddressBook.demo.type.AddressType
 import com.AddressBook.demo.type.PhoneType
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import java.util.*
 import java.time.LocalDate
 
 @Service
-class ContactService(private val contactRepository: ContactRepository,  private val inputProvider: InputProvider) {
+class ContactService(private val contactRepository: ContactRepository, @Qualifier("consoleInputProvider") private val inputProvider: InputProvider
+) {
     fun addNewContact(){
-        println("Enter first name:")
-        val firstName = inputProvider.readln()
+        val firstName = readNonEmptyInput("Enter first name:", inputProvider)
         if (firstName.equals("exit", ignoreCase = true)) return
 
-        println("Enter last name:")
-        val lastName = inputProvider.readln()
+        val lastName = readNonEmptyInput("Enter last name:", inputProvider)
         if (lastName.equals("exit", ignoreCase = true)) return
 
-        println("Enter birth date (yyyy-MM-dd):")
-        val birthDateInput = inputProvider.readlnOrNull()
-        if (birthDateInput.equals("exit", ignoreCase = true)) return
+        var birthDate: LocalDate? = null
 
-        val birthDate = if (birthDateInput.isNullOrBlank()) null else LocalDate.parse(birthDateInput)
+        while (true) {
+            val input = readNonEmptyInput("Enter birth date (yyyy-MM-dd) or 'exit' to cancel:", inputProvider)
+            if (input.equals("exit", ignoreCase = true)) break
 
-        val address = mutableListOf<Address>()
-        println("How many addresses do you want to add?:")
-        val addressCountInput = inputProvider.readlnOrNull()
-        if (addressCountInput.equals("exit", ignoreCase = true)) return
+            if (input.isBlank()) {
+                birthDate = null
+                break
+            }
 
-        val addressCount = addressCountInput?.toIntOrNull() ?: 0
-        repeat(addressCount) {
-            println("Street:")
-            val street = inputProvider.readln()
-            if (street.equals("exit", ignoreCase = true)) return
-
-            println("House Number:")
-            val houseNumber = inputProvider.readln()
-            if (houseNumber.equals("exit", ignoreCase = true)) return
-
-            println("Postal Code:")
-            val postalCode = inputProvider.readlnOrNull()
-            if (postalCode.equals("exit", ignoreCase = true)) return
-
-            println("City:")
-            val city = inputProvider.readlnOrNull()
-            if (city.equals("exit", ignoreCase = true)) return
-
-            println("Address Type [BUSINESS/PRIVATE]:")
-            val typeInput = inputProvider.readln()
-            if (typeInput.equals("exit", ignoreCase = true)) return
-            val type = AddressType.valueOf(typeInput.uppercase())
-
-            address.add(Address(
-                street = street,
-                houseNumber = houseNumber,
-                postalCode = postalCode,
-                city = city,
-                type = type
-            ))
+            try {
+                birthDate = LocalDate.parse(input)
+                break
+            } catch (ex: Exception) {
+                println("Invalid format. Please enter date as yyyy-MM-dd.")
+            }
         }
 
-        val phoneNumbers = mutableListOf<PhoneNumber>()
-        println("How many phone numbers do you want to add? :")
-        val phoneCountInput = inputProvider.readlnOrNull()
-        if (phoneCountInput.equals("exit", ignoreCase = true)) return
+        val addressCountInput = readNonEmptyInput("How many addresses do you want to add?:", inputProvider)
+        if (addressCountInput.equals("exit", ignoreCase = true)) return
+        val addressCount = addressCountInput.toIntOrNull() ?: 0
+        val address = mutableSetOf<Address>()
+        repeat(addressCount) {
+            val street = readNonEmptyInput("Street:", inputProvider)
+            if (street.equals("exit", ignoreCase = true)) return
 
-        val phoneCount = phoneCountInput?.toIntOrNull() ?: 0
+            val houseNumber = readNonEmptyInput("House Number:", inputProvider)
+            if (houseNumber.equals("exit", ignoreCase = true)) return
+
+            val postalCode = readNonEmptyInput("Postal Code:", inputProvider)
+            if (postalCode.equals("exit", ignoreCase = true)) return
+
+            val city = readNonEmptyInput("City:", inputProvider)
+            if (city.equals("exit", ignoreCase = true)) return
+
+            val addressTypeInput = readNonEmptyInput("Address Type [BUSINESS/PRIVATE]:", inputProvider)
+            if (addressTypeInput.equals("exit", ignoreCase = true)) return
+            val addressType = AddressType.valueOf(addressTypeInput.uppercase())
+
+
+            address.add(
+                Address(
+                    street = street,
+                    houseNumber = houseNumber,
+                    postalCode = postalCode,
+                    city = city,
+                    type = addressType
+                )
+            )
+        }
+
+        val phoneCountInput = readNonEmptyInput("How many phone numbers do you want to add?:", inputProvider)
+        if (phoneCountInput.equals("exit", ignoreCase = true)) return
+        val phoneCount = phoneCountInput.toIntOrNull() ?: 0
+        val phoneNumber = mutableSetOf<PhoneNumber>()
         repeat(phoneCount) {
-            println("Phone Number:")
-            val number = inputProvider.readln()
+            val number = readNonEmptyInput("Phone Number:", inputProvider)
             if (number.equals("exit", ignoreCase = true)) return
 
-            println("Phone Type [LANDLINE_BUSINESS, LANDLINE_PRIVATE, MOBILE_BUSINESS, MOBILE_PRIVATE]:")
-            val typeInput = inputProvider.readln()
-            if (typeInput.equals("exit", ignoreCase = true)) return
-            val type = PhoneType.valueOf(typeInput.uppercase())
+            val phoneTypeInput = readNonEmptyInput(
+                "Phone Type [LANDLINE_BUSINESS, LANDLINE_PRIVATE, MOBILE_BUSINESS, MOBILE_PRIVATE]:",
+                inputProvider
+            )
+            if (phoneTypeInput.equals("exit", ignoreCase = true)) return
+            val phoneType = PhoneType.valueOf(phoneTypeInput.uppercase())
 
-            phoneNumbers.add(PhoneNumber(phoneNumber = number, phoneType = type))
+            phoneNumber.add(
+                PhoneNumber(
+                    phoneNumber = number,
+                    phoneType = phoneType
+                )
+            )
         }
 
         val contact = Contact(
@@ -90,15 +103,23 @@ class ContactService(private val contactRepository: ContactRepository,  private 
             lastName = lastName,
             birthDate = birthDate,
             address = address,
-            phoneNumber = phoneNumbers
+            phoneNumber = phoneNumber
         )
+
+        address.forEach { it.contact = contact }
+        phoneNumber.forEach { it.contact = contact }
+
+        contact.address.addAll(address)
+        contact.phoneNumber.addAll(phoneNumber)
+
         contactRepository.save(contact)
-        
+        println("Contact saved successfully")
     }
     fun editContact(){
         println("Enter Id to edit:")
-        val idInput = readlnOrNull()
-        val id = idInput?.toLongOrNull()
+        val idInput = readNonEmptyInput("Enter ID", inputProvider)
+        if (idInput.equals("exit", ignoreCase = true)) return
+        val id = validatingNumber(idInput)
 
         if (id == null) {
             println(CustomError.INVALID_ID)
@@ -111,24 +132,64 @@ class ContactService(private val contactRepository: ContactRepository,  private 
         
     }
     fun deleteContact(){
-        val idInput = inputProvider.readlnOrNull()
-        val id = idInput?.toLongOrNull()
+        val idInput = readNonEmptyInput("Enter ID to delete:", inputProvider)
+        if (idInput.equals("exit", ignoreCase = true)) return
+        val id = validatingNumber(idInput)
         if (id == null) {
             println(CustomError.INVALID_ID)
             return
         }
-        contactRepository.deleteById(id)
+        if(contactRepository.findAllList().none { el -> el.id == id }){
+            println("Contact not Found")
+        }else{
+            contactRepository.deleteById(id)
+            println("Contact deleted successfully")
+        }
+
+
     }
     fun getAllContacts(): List<Contact>{
-       return contactRepository.findAll()
+       return contactRepository.findAllList()
     }
     fun getContact(): Contact? {
-        val idInput = inputProvider.readlnOrNull()
-        val id = idInput?.toLongOrNull()
+        val idInput = readNonEmptyInput("Enter ID to get a contact:", inputProvider)
+        if (idInput.equals("exit", ignoreCase = true)) return null
+        val id = validatingNumber(idInput)
         if (id == null) {
             println(CustomError.INVALID_ID)
             return null
         }
         return contactRepository.findById(id).orElse(null)
+    }
+    fun readNonEmptyInput(prompt: String, inputProvider: InputProvider): String {
+        while (true) {
+            try {
+                println(prompt)
+                val input = inputProvider.readln().trim()
+                if (input.isNotEmpty()) return input
+                else println("Input cannot be empty. Please try again.")
+            } catch (ex: Exception) {
+                println("Invalid input. Please try again.")
+            }
+        }
+    }
+
+    fun validatingNumber(idInput: String): Long? {
+        var value: Long?
+
+        while (true) {
+            if (idInput.isBlank()) {
+                value = null
+                break
+            }
+
+            try {
+                value = idInput.toLongOrNull()
+                break
+            } catch (ex: Exception) {
+                println("Invalid format")
+            }
+        }
+        return value
     }
 }
