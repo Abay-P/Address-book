@@ -33,10 +33,10 @@ Available info in contacts include:
    CREATE DATABASE addressbook;
 
    Create user
-   CREATE USER your_db_user WITH ENCRYPTED PASSWORD 'your_db_password';
+   CREATE USER abaykdas WITH ENCRYPTED PASSWORD 'password123';
 
    Grant privileges
-   GRANT ALL PRIVILEGES ON DATABASE addressbook TO your_db_user;
+   GRANT ALL PRIVILEGES ON DATABASE addressbook TO abaykdas;
 * Open in Intellij, and run the application
 * User can add, update, delete, view contact using the commands in command liner interface
 
